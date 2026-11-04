@@ -43,17 +43,21 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = '';
     });
 
-    final server = _serverController.text.trim();
+    String server = _serverController.text.trim();
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
-    final url = Uri.parse('$server/player_api.dart?username=$username&password=$password');
+    if (server.endsWith('/')) {
+      server = server.substring(0, server.length - 1);
+    }
+
+    final url = Uri.parse('$server/player_api.php?username=$username&password=$password');
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['user_info']['auth'] == 1) {
+        if (data['user_info'] != null && data['user_info']['auth'] == 1) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -62,17 +66,17 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         } else {
           setState(() {
-            _errorMessage = 'بيانات الدخول غير صحيحة';
+            _errorMessage = 'بيانات الدخول غير صحيحة أو الحساب منتهي';
           });
         }
       } else {
         setState(() {
-          _errorMessage = 'فشل الاتصال بالسيرفر';
+          _errorMessage = 'فشل الاتصال بالسيرفر (كود الخطأ: ${response.statusCode})';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'حدث خطأ في الاتصال: $e';
+        _errorMessage = 'حدث خطأ في الاتصال، تأكد من صحة الرابط والبورت';
       });
     } finally {
       setState(() {
@@ -92,7 +96,9 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             TextField(
               controller: _serverController,
-              decoration: const InputDecoration(labelText: 'رابط السيرفر (مثال: http://example.com:8080)'),
+              decoration: const InputDecoration(
+                labelText: 'رابط السيرفر (مثال: http://mgtv.pro:8080)',
+              ),
             ),
             TextField(
               controller: _usernameController,
