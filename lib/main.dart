@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'dart:convert' as convert;
+import 'dart:io';
+
+// فئة لتجاوز مشاكل شهادات الأمان والسيرفرات غير الآمنة
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
+}
 
 void main() {
+  HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
 }
 
@@ -59,29 +70,38 @@ class _LoginScreenState extends State<LoginScreen> {
     final url = Uri.parse('$server/player_api.php?username=$username&password=$password');
 
     try {
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
+      // إرسال الطلب مع هيدرز مخصصة لمنع حظر السيرفر للطلب
+      final response = await http.get(
+        url,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        },
+      ).timeout(const Duration(seconds: 15));
+
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['user_info'] != null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(server: server, username: username, password: password, userInfo: data['user_info']),
-            ),
-          );
-        } else {
-          setState(() {
-            _errorMessage = 'بيانات الدخول غير صحيحة';
-          });
-        }
+        try {
+          final data = convert.json.decode(response.body);
+          if (data['user_info'] != null) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(server: server, username: username, password: password, userInfo: data['user_info']),
+              ),
+            );
+            return;
+          }
+        } catch (_) {}
+        setState(() {
+          _errorMessage = 'بيانات الدخول غير صحيحة';
+        });
       } else {
         setState(() {
-          _errorMessage = 'خطأ في الاتصال بالسيرفر';
+          _errorMessage = 'خطأ من السيرفر: ${response.statusCode}';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'تأكد من رابط السيرفر والإنترنت';
+        _errorMessage = 'خطأ في الاتصال: تأكد من الإنترنت والسيرفر';
       });
     } finally {
       setState(() {
