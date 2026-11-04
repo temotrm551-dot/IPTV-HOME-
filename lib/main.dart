@@ -12,10 +12,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IPTV Player',
+      title: 'IPTV Pro',
       theme: ThemeData(
         brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF1DB954),
+          surface: Color(0xFF1E1E1E),
+        ),
+        useMaterial3: true,
       ),
       home: const LoginScreen(),
       debugShowCheckedModeBanner: false,
@@ -31,9 +36,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _serverController = TextEditingController();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _serverController = TextEditingController(text: 'http://mgtv.pro:8080');
+  final _usernameController = TextEditingController(text: 'malik215');
+  final _passwordController = TextEditingController(text: '215112');
   bool _isLoading = false;
   String _errorMessage = '';
 
@@ -54,29 +59,29 @@ class _LoginScreenState extends State<LoginScreen> {
     final url = Uri.parse('$server/player_api.php?username=$username&password=$password');
 
     try {
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      final response = await http.get(url).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['user_info'] != null && data['user_info']['auth'] == 1) {
+        if (data['user_info'] != null) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => HomeScreen(server: server, username: username, password: password),
+              builder: (context) => HomeScreen(server: server, username: username, password: password, userInfo: data['user_info']),
             ),
           );
         } else {
           setState(() {
-            _errorMessage = 'بيانات الدخول غير صحيحة أو الحساب منتهي';
+            _errorMessage = 'بيانات الدخول غير صحيحة';
           });
         }
       } else {
         setState(() {
-          _errorMessage = 'فشل الاتصال بالسيرفر (كود الخطأ: ${response.statusCode})';
+          _errorMessage = 'خطأ في الاتصال بالسيرفر';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'حدث خطأ في الاتصال، تأكد من صحة الرابط والبورت';
+        _errorMessage = 'تأكد من رابط السيرفر والإنترنت';
       });
     } finally {
       setState(() {
@@ -88,41 +93,83 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تسجيل دخول IPTV')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _serverController,
-              decoration: const InputDecoration(
-                labelText: 'رابط السيرفر (مثال: http://mgtv.pro:8080)',
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.tv_rounded, size: 80, color: Color(0xFF1DB954)),
+              const SizedBox(height: 16),
+              const Text(
+                'IPTV STREAM PRO',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.5),
               ),
-            ),
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'اسم المستخدم'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'كلمة المرور'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              ElevatedButton(
-                onPressed: _login,
-                child: const Text('دخول'),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 5))
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _serverController,
+                      decoration: InputDecoration(
+                        labelText: 'رابط السيرفر',
+                        prefixIcon: const Icon(Icons.link),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        labelText: 'اسم المستخدم',
+                        prefixIcon: const Icon(Icons.person_outline),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'كلمة المرور',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1DB954),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: _isLoading ? null : _login,
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('تسجيل الدخول', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            if (_errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(_errorMessage, style: const TextStyle(color: Colors.red)),
-              ),
-          ],
+              if (_errorMessage.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent)),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -133,15 +180,54 @@ class HomeScreen extends StatelessWidget {
   final String server;
   final String username;
   final String password;
+  final Map<String, dynamic> userInfo;
 
-  const HomeScreen({super.key, required this.server, required this.username, required this.password});
+  const HomeScreen({super.key, required this.server, required this.username, required this.password, required this.userInfo});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('القنوات والخدمات')),
-      body: const Center(
-        child: Text('مرحباً بك! تم تسجيل الدخول بنجاح.', style: TextStyle(fontSize: 18)),
+      appBar: AppBar(
+        title: Text('مرحباً: ${userInfo['username'] ?? 'مستخدم'}'),
+        backgroundColor: const Color(0xFF1E1E1E),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.count(
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          children: [
+            _buildMenuCard(context, 'القنوات المباشرة', Icons.live_tv, Colors.blueAccent),
+            _buildMenuCard(context, 'أفلام VOD', Icons.movie, Colors.orangeAccent),
+            _buildMenuCard(context, 'المسلسلات', Icons.video_library, Colors.purpleAccent),
+            _buildMenuCard(context, 'حسابي والاشتراك', Icons.account_circle, Colors.greenAccent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuCard(BuildContext context, String title, IconData icon, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: InkWell(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('قريباً: $title')));
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 48, color: color),
+            const SizedBox(height: 12),
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
